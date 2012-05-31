@@ -6,6 +6,7 @@ import Queue
 import time
 import re
 
+
 from urlparse import urlparse
 class Config:
     seed = "http://www.aifang.com"
