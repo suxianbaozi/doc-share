@@ -1,0 +1,47 @@
+学习solr的过程我会记在这里，一则和大家分享，二则回顾学习的过程，为以后的学习做总结。
+
+今天是第一天，且列下粗略的流水帐，回头有感觉了再充实，学习内容我一般喜欢从配置环境开始。技术工作还是边动手边学习比较好。
+
+我们的代码里只有如何拼凑参数和如何调用api，实际的solr服务器都在其他机器上。所以第一件事情是去搜索solr的简介和本地部署过程。
+百度+google后，发现还是台湾同胞给力，这篇文章的流程是靠谱的。除了jre之外，你可能还需要去安装一下jdk(ubuntu下：$ sudo apt-get install sun-java6-jdk)和ant，关于环境再稍微废话一下jre和jdk。
+jre =Java Runtime Enviroment 也就是java的运行环境而不是开发环境，也就是编译过的.class文件不需要jdk也是可以直接运行的。
+jdk=Java Development Kit，他主要负责去编译开发人员编写的源代码，主要是开发和调试需要jdk环境。所以安装jdk就会同时具备jvm（java virtual machine）。
+另外需要注意的是，jdk和jre分别会创建一个jre目录。这是因为jdk本身也是java应用程序，所以需要单独的jre支持。
+按照介绍中所描述的流程，应该可以顺利安装好了，访问http://localhost:8983/solr/ 试试看。
+
+我们选择solr官方例子中自带的jetty服务来运行web程序。如同apache的httpd.conf一样，jetty同样通过配置文件来控制服务器和模块的加载。
+
+example/start.jar包解压缩后，发现start.config里的配置文件在example/etc/jetty.xml，里面定义了<Set name=”webAppDir”><SystemProperty name=”jetty.home” default=”.”/>/webapps</Set>来确定web的根目录，这相当于apache的DocumentRoot。
+webapps目录的war包解压后的index.jsp就是入口文件了。
+路径的route是通过web容器自动加载webapps(即web根目录)/WEB-INF/web.xml来实现
+说完环境之后，说点和solr本身相关的。
+
+solr和lucene的关系不是竞争，而是包装。简单来说就是将lucene服务化。
+solr中的数据，所包含的字段和类型由一个强大的配置文件来组织。
+
+今天的内容主要还是开展在外围。
+
+1. solr服务开放的是一个基于http协议的地址，这样就让solr服务有了跨平台的接口。所以详细看了一下php中远程调用http协议的方式，有几种。但curl最为强大，也是我们的选择。学习发现php的curl模块不只可以做http请求，ftp,telnet样样精通。
+
+2.顺便复习了http和tcp协议的规范和基本原理。tcp要3次握手，顺便想到zmq的pub和sub套接字一定会丢失消息的原因就是这个。另外还有http头信息的规范等等，不过我有个疑问就是。服务器的响应(response)的头信息是什么时候发出的？
+
+3.把大唐和老余之前写好的，我们系统再用的solr基类读了一下。主要看了curl的并发那个函数。
+
+4.最后是solr查询语句的标准，主要是facet
+昨天和今天上午在看php-memcached模块和tech2.0的作业。所以solr今天才开始看。
+
+读了Lucene实战之后，首先感觉外国人写东西和中国人写东西思路不一样。
+
+老外：假想读者都是初学者，甚至没有任何相关背景。在这个假设之下写，所以很容易看懂，章节顺序安排合理。
+
+读了第一章的简介有以下要点：
+
+分词其实有2块：
+文档本身内容的分析器
+查询分析器
+比如：搜索房源输入“一百万”，这个解析应该由查询分析去做，猜测用户其实是搜price=100万。而搜索“学校”想要把带“学区”的也同时搜出来，这个要用到内容分析时的同义词。（这个好像不太对，先去掉）
+
+2. 向量空间模型。这个很受启发，把查询语句分解后和文档的若干项进行不同维度的比较，返回相关性。
+
+
+
