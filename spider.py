@@ -51,16 +51,20 @@ class getView(Thread):
             id = viewUrlList.get()
             viewUrl = viewBaseUrl%(id,)
             #print url
-            req = urllib2.Request(viewUrl)
-            req.add_header("Referer","http://www.chemicalbook.com/")
-            req.add_header("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.95 Safari/537.36")
-            req.add_header("Cookie","ASP.NET_SessionId=j1vaqq55e5y5gu454ic3icrt")    
-            fp = urllib2.urlopen(req)
-            content = fp.read()
-            fp.close()
+            try:
+                req = urllib2.Request(viewUrl)
+                req.add_header("Referer","http://www.chemicalbook.com/")
+                req.add_header("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.95 Safari/537.36")
+                req.add_header("Cookie","ASP.NET_SessionId=j1vaqq55e5y5gu454ic3icrt")    
+                fp = urllib2.urlopen(req)
+                content = fp.read()
+                fp.close()
+            except:
+                viewUrlList.put(id)
+                continue
+            
             total += 1
             print total
-
             if 'System busy' in content:
                 print 'get view shit shit'
                 break
