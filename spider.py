@@ -26,7 +26,7 @@ class getUrl(Thread):
         content = fp.read()
         fp.close()
         if 'System busy' in content:
-            print 'shit shit'
+            print 'oh got some shit!'
             return
         viewList = re.findall("CB(\d+)\_EN\.htm",content);
         for id in viewList:
@@ -67,7 +67,7 @@ class getView(Thread):
             print total
             
             if 'System busy' in content:
-                print 'get view shit shit'
+                print 'get view, oh got some shit!'
                 viewUrlList.put(id)
                 time.sleep(60*2)
                 continue
