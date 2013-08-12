@@ -65,9 +65,12 @@ class getView(Thread):
             
             total += 1
             print total
+            
             if 'System busy' in content:
                 print 'get view shit shit'
-                break
+                viewUrlList.put(id)
+                time.sleep(60*2)
+                continue
             #get img
             img = re.findall("CAS\\\GIF\\\(.+)\.gif",content)
             print img
@@ -78,8 +81,11 @@ class getView(Thread):
         
 print time.strftime( ISOTIMEFORMAT, time.localtime() )
 
+
 for i in range(0,101):
     getUrl(i).start()
+    time.sleep(1)
 
+#get view start...
 for i in range(0,20):
     getView(i).start()
