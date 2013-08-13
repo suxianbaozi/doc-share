@@ -21,8 +21,8 @@ getViewThreads = {}
 
 
 pIndex = 0
-proxies = ['110.4.12.170:80',]
-#proxies = ['',]
+proxies = ['173.213.113.111:8089',]
+#proxies = ['',] '110.4.12.170:80','173.213.113.111:8089'
 
 
 
@@ -44,15 +44,22 @@ def getUrlContent(url):
     fp = urllib2.urlopen(req)
     content = fp.read()
     fp.close()
-    return content
+    return {'fp':fp,'content':content}
     
 def forSafe():
     global totalGot
     global total
     
     if total%900==0 and total>0:
+        print '900 ','sleep 10 minutes'
+        
         for k,thread in getViewThreads.items():
             thread.wait = 60*10 #休息十分钟
+            try:
+                thread.fp.close()
+            except:
+                pass
+        
         try:
             getUrlContent('http://www.chemicalbook.com/')
             time.sleep(1)
@@ -61,18 +68,27 @@ def forSafe():
             getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
             time.sleep(1)
         except:
-            getUrlContent('http://www.chemicalbook.com/')
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
-            time.sleep(1)
-            return;
+            try:
+                getUrlContent('http://www.chemicalbook.com/')
+                time.sleep(1)
+                getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
+                time.sleep(1)
+                getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
+                time.sleep(1)
+            except:
+                pass
+            return
+        return
     
     if total%100==0 and total>0:
         for k,thread in getViewThreads.items():
             if 100>thread.wait:
                 thread.wait = 100
+            
+            try:
+                thread.fp.close()
+            except:
+                pass
         try:
             getUrlContent('http://www.chemicalbook.com/')
             time.sleep(1)
@@ -81,12 +97,15 @@ def forSafe():
             getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
             time.sleep(1)
         except:
-            getUrlContent('http://www.chemicalbook.com/')
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
-            time.sleep(1)
+            try:
+                getUrlContent('http://www.chemicalbook.com/')
+                time.sleep(1)
+                getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
+                time.sleep(1)
+                getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
+                time.sleep(1)
+            except:
+                pass
             return;
     
 
@@ -110,6 +129,8 @@ class getUrl(Thread):
             #print url
             try:
                 content = getUrlContent(url)
+                self.fp = content['fp']
+                content = content['content']
             except:
                 listUrlList.put(id)
                 return
@@ -120,8 +141,8 @@ class getUrl(Thread):
             
             if 'System busy' in content:
                 listUrlList.put(id)
-                time.sleep(60*60*2)
                 print 'oh got some shit!'
+                time.sleep(60*60*2)
                 continue
             
             viewList = re.findall("CB(\d+)\_EN\.htm",content);
@@ -149,6 +170,8 @@ class getView(Thread):
             #print url
             try:
                 content = getUrlContent(viewUrl)
+                self.fp = content['fp']
+                content = content['content']
             except:
                 viewUrlList.put(id)
                 continue
