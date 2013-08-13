@@ -21,8 +21,8 @@ getViewThreads = {}
 
 
 pIndex = 0
-proxies = ['110.4.12.170:80',]
-#proxies = ['',]
+proxies = ['211.162.126.42:9090','219.143.207.140:3128','']
+
 
 
 
@@ -46,64 +46,20 @@ def getUrlContent(url):
     fp.close()
     return content
     
-def forSafe():
-    global totalGot
-    global total
-    
-    if total%900==0 and total>0:
-        for k,thread in getViewThreads.items():
-            thread.wait = 60*10 #休息十分钟
-        try:
-            getUrlContent('http://www.chemicalbook.com/')
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
-            time.sleep(1)
-        except:
-            getUrlContent('http://www.chemicalbook.com/')
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
-            time.sleep(1)
-            return;
-    
-    if total%100==0 and total>0:
-        for k,thread in getViewThreads.items():
-            if 100>thread.wait:
-                thread.wait = 100
-        try:
-            getUrlContent('http://www.chemicalbook.com/')
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
-            time.sleep(1)
-        except:
-            getUrlContent('http://www.chemicalbook.com/')
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
-            time.sleep(1)
-            return;
-    
-
 
 class getUrl(Thread):
     def __init__(self,tid):
         Thread.__init__(self)
         self.tid = tid
-        self.wait = 0
+        self.wait = False
         
     def run(self):
         global total
         while True:
-            if self.wait>0:
+            if self.wait:
                 #print 'thread list_',self.tid,' waiting...'
-                time.sleep(self.wait)
-                self.wait = 0
+                time.sleep(20)
+                self.wait = False
             
             id = listUrlList.get()
             url =  baseUrl%(id,)
@@ -111,11 +67,11 @@ class getUrl(Thread):
             try:
                 content = getUrlContent(url)
             except:
+                print 'error list auto put back',id
                 listUrlList.put(id)
                 return
             
             total += 1
-            
             #print 'the ',total,'st page'
             
             if 'System busy' in content:
@@ -128,21 +84,25 @@ class getUrl(Thread):
             
             for vid in viewList:
                 viewUrlList.put(vid);
-            forSafe()
+
+            if total%20==0:
+                for k,thread in getViewThreads.items():
+                    thread.wait = True       
+
 
 class getView(Thread):
     def __init__(self,tid):
         Thread.__init__(self)
         self.tid = tid
-        self.wait = 0
+        self.wait = False
     def run(self):
         global total
         global totalGot
         while True:
-            if self.wait>0:
+            if self.wait:
                 print 'thread view_',self.tid,' waiting...'
-                time.sleep(self.wait)
-                self.wait = 0
+                time.sleep(20)
+                self.wait = False
             
             id = viewUrlList.get()
             viewUrl = viewBaseUrl%(id,)
@@ -150,6 +110,7 @@ class getView(Thread):
             try:
                 content = getUrlContent(viewUrl)
             except:
+                print 'error auto put back view'
                 viewUrlList.put(id)
                 continue
             
@@ -166,12 +127,14 @@ class getView(Thread):
                 img = re.findall("CAS\\\GIF\\\(.+)\.gif",content)
                 #print img
             except:
+                print 'error auto put back view'
                 viewUrlList.put(id)
                 
             #print "Geted:",id,time.strftime( ISOTIMEFORMAT, time.localtime() )
             totalGot += 1
-            forSafe()
-            
+            if total%50==0:
+                for k,thread in getViewThreads.items():
+                    thread.wait = True
 
 
 
@@ -182,11 +145,14 @@ class Timer(Thread):
         t = 0
         while True:
             t+=1
+            
             sys.stdout.write('time has passed:'+str(t)+'S===total got:'+str(totalGot)+'===total page:'+str(total))
-            sys.stdout.write('===viewQueue length:'+str(viewUrlList.qsize()))
             sys.stdout.write('\r')
             sys.stdout.flush()
+            
+            #print 'I am timer',t,'===total got:',totalGot,'===total page:',total
             time.sleep(1)
+
                   
 print time.strftime( ISOTIMEFORMAT, time.localtime() )
 
@@ -194,12 +160,12 @@ print time.strftime( ISOTIMEFORMAT, time.localtime() )
 for i in range(0,101):
     listUrlList.put(i)
 
-for i in range(0,50):
+for i in range(0,5):
     getViewThreads['list_'+str(i)] = getUrl(i)
     getViewThreads['list_'+str(i)].start()
 
 #get view start...
-for i in range(0,50):
+for i in range(0,5):
     getViewThreads['view_'+str(i)] = getView(i)
     getViewThreads['view_'+str(i)].start()
 
