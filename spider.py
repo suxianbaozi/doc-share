@@ -7,11 +7,18 @@ import Queue
 import re
 import time
 import sys
+import urllib
 
-baseUrl = "http://www.chemicalbook.com/ProductCASList_13_%d00_EN.htm"
+baseUrl = "http://www.chemicalbook.com/ProductCASList_12_%d00_EN.htm"
 viewBaseUrl = "http://www.chemicalbook.com/ProductChemicalPropertiesCB%s_EN.htm"
 viewUrlList = Queue.Queue(maxsize = 0)
 listUrlList = Queue.Queue(maxsize = 0)
+
+dataList = Queue.Queue(maxsize = 0)
+
+pageDic = {};
+
+idDic = {}
 
 ISOTIMEFORMAT='%Y-%m-%d %X'
 total = 0
@@ -20,23 +27,26 @@ totalGot = 0
 
 getViewThreads = {}
 
-listThreadNum = 50
-viewThreadNum = 50
+listThreadNum = 30
+viewThreadNum = 30
 
 pIndex = 0
 #proxies = ['110.4.12.170:80',]
 proxies = [
-           '221.10.40.232:81',
+           #'203.86.79.227:80',
+           #'221.10.40.232:81',
+           '173.213.113.111:8089',
+           '106.3.43.73:80',
+           '219.239.227.81:8121',
+           '119.254.90.18:8080',
            '121.26.229.197:8081',
            '60.8.63.52:8081',
            '125.91.4.146:3328',
            '221.10.40.236:83',
            '202.116.160.89:80',
            '222.180.173.10:8080',
-           '203.86.79.227:80',
-           '173.213.113.111:8089',
            ''
-           ] #'110.4.12.170:80','173.213.113.111:8089'
+           ] #'110.4.12.170:80','173.213.113.111:8089' 
 
 
 def changeProxy():
@@ -74,32 +84,13 @@ def forSafe():
         print 'oh  500 ,change proxy'
         changeProxy()
         
-        
         for k,thread in getViewThreads.items():
-            thread.waitLong = 60*10*0.5 #休息十分钟
+            thread.waitLong = 300 #休息10分钟
             try:
                 thread.fp.close()
             except:
                 pass
-        #try:
-        #    getUrlContent('http://www.chemicalbook.com/')
-        #    time.sleep(1)
-        #    getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
-        #    time.sleep(1)
-        #    getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
-        #    time.sleep(1)
-#        except:
-#            try:
-#                getUrlContent('http://www.chemicalbook.com/')
-#                time.sleep(1)
-#                getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
-#                time.sleep(1)
-#                getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
-#                time.sleep(1)
-#            except:
-#                pass
-#            return
-#        return
+        
     
     if total%100==0 and total>0:
         for k,thread in getViewThreads.items():
@@ -110,24 +101,7 @@ def forSafe():
                 thread.fp.close()
             except:
                 pass
-        try:
-            getUrlContent('http://www.chemicalbook.com/')
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
-            time.sleep(1)
-            getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
-            time.sleep(1)
-        except:
-            try:
-                getUrlContent('http://www.chemicalbook.com/')
-                time.sleep(1)
-                getUrlContent('http://www.chemicalbook.com/ProductCASList_13_0_EN.htm');
-                time.sleep(1)
-                getUrlContent('http://www.chemicalbook.com/BuyingLeadList_EN.aspx');
-                time.sleep(1)
-            except:
-                pass
-            return;
+        
     
 
 
@@ -148,8 +122,7 @@ class getUrl(Thread):
                 print 'thread list_',self.tid,' waitingLong...'
                 time.sleep(self.waitLong)
                 self.waitLong = 0
-            if listUrlList.qsize()==0:
-                break
+            
             id = listUrlList.get()
             url =  baseUrl%(id,)
             #print url
@@ -159,7 +132,7 @@ class getUrl(Thread):
                 content = content['content']
             except:
                 listUrlList.put(id)
-                return
+                continue
             
             total += 1
             
@@ -170,11 +143,23 @@ class getUrl(Thread):
                 print 'oh got some shit!'
                 time.sleep(60*60*2)
                 continue
-            
             viewList = re.findall("CB(\d+)\_EN\.htm",content);
+            pageList = re.findall("ProductCASList\_12\_(\d+)00\_EN\.htm",content);
             
             for vid in viewList:
-                viewUrlList.put(vid);
+                if idDic.has_key(vid):
+                    continue
+                else:
+                    idDic[vid] = 1
+                    viewUrlList.put(vid);
+            
+            for pid in pageList:
+                if pageDic.has_key(pid):
+                    continue
+                else:
+                    pageDic[pid] = 1
+                    listUrlList.put(int(pid))
+            
             forSafe()
 
 class getView(Thread):
@@ -216,29 +201,49 @@ class getView(Thread):
                 viewUrlList.put(id)
                 time.sleep(60*60*2)
                 continue
-            #get img
-            try:
-                img = re.findall("CAS\\\GIF\\\(.+)\.gif",content)
-                #print img
-            except:
-                viewUrlList.put(id)
-                
-            #print "Geted:",id,time.strftime( ISOTIMEFORMAT, time.localtime() )
-            totalGot += 1
-            forSafe()
             
+            data = {'cas_index':1,'content':content,'id':id}
+            dataList.put(data)
+            
+            totalGot += 1
+            #print "Geted:",id,time.strftime( ISOTIMEFORMAT, time.localtime() )
+            forSafe()
 
-
-
+class SendData(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.hasSend = 0
+        print 'sendData'
+    def run(self):
+        while True:
+            data = dataList.get()
+            dataStr = urllib.urlencode(data)
+            
+            try :
+                api = urllib.urlopen('http://www.mq35.com/gather_en/gather.php',dataStr)
+                insertId =  api.read()
+                api.close()
+                self.hasSend += 1
+            except Exception,e:
+                print e
+                dataList.put(data)
+            time.sleep(2);
+            
+                
+                
 class Timer(Thread):
     def __init__(self):
         Thread.__init__(self)
+        
     def run(self):
         t = 0
         while True:
             t+=1
-            sys.stdout.write('time has passed:'+str(t)+'S===total got:'+str(totalGot)+'===total page:'+str(total))
-            sys.stdout.write('===viewQueue length:'+str(viewUrlList.qsize()))
+            sys.stdout.write('passed:'+str(t)+',got:'+str(totalGot)+',page:'+str(total))
+            sys.stdout.write(',viewQueue:'+str(viewUrlList.qsize()))
+            sys.stdout.write(',pageQueue:'+str(listUrlList.qsize()))
+            sys.stdout.write(',sended:'+str(ST.hasSend))
+            sys.stdout.write(',remain:'+str(dataList.qsize()))
             sys.stdout.write('\r')
             sys.stdout.flush()
             time.sleep(1)
@@ -247,7 +252,7 @@ print time.strftime( ISOTIMEFORMAT, time.localtime() )
 
 #检查代理可用
 
-for i in range(0,range(len(proxies))):
+for i in range(0,len(proxies)):
     
     changeProxy()
     
@@ -257,22 +262,27 @@ for i in range(0,range(len(proxies))):
     
     try:
         c  = getUrlContent('http://www.baidu.com');
-        if 'baidu' not in c:
+        
+        if 'baidu' not in c['content']:
             print proxies[cp],' seemed not available remove it';
             proxies.remove(proxies[cp])
         else:
             print proxies[cp],' available'
-    except:
+    except Exception,e:
+        print e
         cp = pIndex-1;
         print proxies[cp],' seemed not available remove it';
         proxies.remove(proxies[cp])
     
 
 
+
+
+
 pIndex = 0
 changeProxy()
 
-for i in range(0,101):
+for i in range(0,1):
     listUrlList.put(i)
 
 for i in range(0,listThreadNum):
@@ -285,4 +295,8 @@ for i in range(0,viewThreadNum):
     getViewThreads['view_'+str(i)].start()
 
 print "Let's go timer:"
+
+ST = SendData()
+ST.start()
+
 Timer().start()
