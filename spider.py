@@ -8,6 +8,7 @@ import re
 import time
 import sys
 import urllib
+import os
 
 baseUrl = "http://www.chemicalbook.com/ProductCASList_12_%d00_EN.htm"
 viewBaseUrl = "http://www.chemicalbook.com/ProductChemicalPropertiesCB%s_EN.htm"
@@ -34,8 +35,7 @@ pIndex = 0
 #proxies = ['110.4.12.170:80',]
 
 proxies = [
-           '119.167.231.72:8080',
-           '111.1.55.19:8080',
+           #'111.1.55.19:8080',
            '211.142.236.135:80',
            '110.4.24.170:80',
            #'203.86.79.227:80',
@@ -49,11 +49,17 @@ proxies = [
            '221.10.40.236:83',
            '202.116.160.89:80',
            '110.4.12.170:83',
+           '119.167.231.72:8080',
            #'222.180.173.10:8080',
            #'106.3.43.73:80',
            ''
            ] #'110.4.12.170:80','173.213.113.111:8089' 
 
+
+def logStatus(str):
+    fp = open("/spider.log","a")
+    fp.write(str+'\n');
+    fp.close()
 
 def changeProxy():
     global pIndex
@@ -87,11 +93,11 @@ def forSafe():
     global total
     
     if total%500==0 and total>0:
-        print 'oh  500 ,change proxy'
+        logStatus('oh  500 ,change proxy')
         changeProxy()
         
         for k,thread in getViewThreads.items():
-            thread.waitLong = 300 #休息10分钟
+            thread.waitLong = 600 #休息10分钟
             try:
                 thread.fp.close()
             except:
@@ -146,7 +152,8 @@ class getUrl(Thread):
             
             if 'System busy' in content:
                 listUrlList.put(id)
-                print 'oh got some shit!'
+                global pIndex
+                logStatus('oh got some shit!'+str(pIndex))
                 time.sleep(60*60*2)
                 continue
             viewList = re.findall("CB(\d+)\_EN\.htm",content);
@@ -203,7 +210,8 @@ class getView(Thread):
             #print 'the ',total,'st page'
             
             if 'System busy' in content:
-                print 'get view, oh got some shit!'
+                global pIndex
+                logStatus('get view, oh got some shit!'+str(pIndex))
                 viewUrlList.put(id)
                 time.sleep(60*60*2)
                 continue
@@ -248,15 +256,46 @@ class Timer(Thread):
             
             ar = (t,totalGot,total,viewUrlList.qsize(),listUrlList.qsize(),ST.hasSend,dataList.qsize())
             status = 'passed:%d,got:%d,page:%d,viewq:%d,pageq:%d,sended:%d,remain:%d'%ar;
-            sys.stdout.write(status);
-            sys.stdout.write('\r')
-            sys.stdout.flush()
+#            sys.stdout.write(status);
+#            sys.stdout.write('\r')
+#            sys.stdout.flush()
             
-            logFp = open('spider.log',"w")
-            logFp.write(status)
+            logFp = open('/spider.log',"a")
+            logFp.write(status+"\n")
             logFp.close()
-            
             time.sleep(1)
+
+def demaeon():
+    try:
+        pid = os.fork()
+        if pid > 0:
+            sys.exit(0)
+    except OSError, e:
+        sys.exit(4)
+
+    os.chdir('/')
+    os.umask(0)
+    os.setsid()
+
+    try:
+        pid = os.fork()
+        if pid > 0:
+            sys.exit(0)
+    except OSError, e:
+        sys.exit(4)
+
+
+    for f in sys.stdout, sys.stderr: f.flush()
+
+
+    si = file('/spider.log', 'r')
+    so = file('/spider.log', 'a+')
+    se = file('/spider.log', 'a+', 0)
+    os.dup2(si.fileno(), sys.stdin.fileno())
+    os.dup2(so.fileno(), sys.stdout.fileno())
+    os.dup2(se.fileno(), sys.stderr.fileno())
+
+demaeon()
                   
 print time.strftime( ISOTIMEFORMAT, time.localtime() )
 
@@ -268,7 +307,7 @@ for i in range(0,len(proxies)):
     
     cp = pIndex-1;
     
-    print 'check ',proxies[cp],'...'
+    logStatus('check '+proxies[cp]+'...')
     
     try:
         c  = getUrlContent('http://www.baidu.com');
@@ -277,7 +316,7 @@ for i in range(0,len(proxies)):
             print proxies[cp],' seemed not available remove it';
             proxies.remove(proxies[cp])
         else:
-            print proxies[cp],' available'
+            logStatus( proxies[cp]+' available')
     except Exception,e:
         print e
         cp = pIndex-1;
