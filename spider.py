@@ -32,11 +32,15 @@ viewThreadNum = 30
 
 pIndex = 0
 #proxies = ['110.4.12.170:80',]
+
 proxies = [
+           '119.167.231.72:8080',
+           '111.1.55.19:8080',
+           '211.142.236.135:80',
+           '110.4.24.170:80',
            #'203.86.79.227:80',
-           #'221.10.40.232:81',
-           '173.213.113.111:8089',
-           '106.3.43.73:80',
+           '221.10.40.232:81',
+           #'173.213.113.111:8089',
            '219.239.227.81:8121',
            '119.254.90.18:8080',
            '121.26.229.197:8081',
@@ -44,7 +48,9 @@ proxies = [
            '125.91.4.146:3328',
            '221.10.40.236:83',
            '202.116.160.89:80',
-           '222.180.173.10:8080',
+           '110.4.12.170:83',
+           #'222.180.173.10:8080',
+           #'106.3.43.73:80',
            ''
            ] #'110.4.12.170:80','173.213.113.111:8089' 
 
@@ -239,13 +245,17 @@ class Timer(Thread):
         t = 0
         while True:
             t+=1
-            sys.stdout.write('passed:'+str(t)+',got:'+str(totalGot)+',page:'+str(total))
-            sys.stdout.write(',viewQueue:'+str(viewUrlList.qsize()))
-            sys.stdout.write(',pageQueue:'+str(listUrlList.qsize()))
-            sys.stdout.write(',sended:'+str(ST.hasSend))
-            sys.stdout.write(',remain:'+str(dataList.qsize()))
+            
+            ar = (t,totalGot,total,viewUrlList.qsize(),listUrlList.qsize(),ST.hasSend,dataList.qsize())
+            status = 'passed:%d,got:%d,page:%d,viewq:%d,pageq:%d,sended:%d,remain:%d'%ar;
+            sys.stdout.write(status);
             sys.stdout.write('\r')
             sys.stdout.flush()
+            
+            logFp = open('spider.log',"w")
+            logFp.write(status)
+            logFp.close()
+            
             time.sleep(1)
                   
 print time.strftime( ISOTIMEFORMAT, time.localtime() )
